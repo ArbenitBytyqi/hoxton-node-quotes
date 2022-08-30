@@ -1,4 +1,5 @@
 import express, { response } from 'express'
+import cors from 'cors'
 
 const quotes =[
     {
@@ -19,6 +20,7 @@ const quotes =[
 ]
 
 const app = express()
+app.use(cors())
 const port = 3000
 
 app.get('/', (req, res) => {
