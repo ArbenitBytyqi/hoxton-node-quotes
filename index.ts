@@ -61,6 +61,21 @@ app.post('/quotes', (req, res) => {
     }
 })
 
+app.delete('/quotes/:id', (req, res) =>{
+    const id = Number(req.params.id)
+    const indexToDelete = quotes.findIndex(quote => quote.id === id)
+
+    if (indexToDelete > -1) {
+        quotes.splice(indexToDelete, 1)
+        res.send({message: 'Quote deleted successfully.😊'})
+    }else{
+        res.status(404).send({error: 'Quote not found. 😒'})
+    }
+
+})
+
+//Quotes extra stuff
+
 app.get('/quotes/:id', (req, res) => {
     const id = Number(req.params.id)
     const match = quotes.find(item => item.id === id)
@@ -116,6 +131,21 @@ app.post('/authors', (req, res) => {
         res.status(400).send({errors})
     }
 })
+
+app.delete('/authors/:id', (req, res) =>{
+    const id = Number(req.params.id)
+    const indexToDelete = authors.findIndex(author => author.id === id)
+
+    if (indexToDelete > -1) {
+        authors.splice(indexToDelete, 1)
+        res.send({message: 'Author deleted successfully.😊'})
+    }else{
+        res.status(404).send({error: 'Author not found. 😒'})
+    }
+
+})
+
+//Authors extra stuff
 
 app.get('/authors/:id', (req, res) => {
     const id = Number(req.params.id)
