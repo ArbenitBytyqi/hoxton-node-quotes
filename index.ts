@@ -61,7 +61,7 @@ app.post('/quotes', (req, res) => {
     }
 })
 
-app.delete('/quotes/:id', (req, res) =>{
+app.delete('/quotes/:id', (req, res) => {
     const id = Number(req.params.id)
     const indexToDelete = quotes.findIndex(quote => quote.id === id)
 
@@ -72,6 +72,25 @@ app.delete('/quotes/:id', (req, res) =>{
         res.status(404).send({error: 'Quote not found. 😒'})
     }
 
+})
+
+app.patch('/quotes/:id', (req, res) => {
+    let id = Number(req.params.id)
+    let match = quotes.find(quote => quote.id === id)
+
+    if(match){
+        if(req.body.description){
+            match.description = req.body.description
+        }
+
+        if(req.body.authorId){
+            match.authorId = req.body.authorId
+        }
+
+        res.send({match})
+    } else {
+        res.status(404).send({error: "Quote not found! 😒"})
+    }
 })
 
 //Quotes extra stuff
@@ -143,6 +162,29 @@ app.delete('/authors/:id', (req, res) =>{
         res.status(404).send({error: 'Author not found. 😒'})
     }
 
+})
+
+app.patch('/authors/:id', (req, res) => {
+    let id = Number(req.params.id)
+    let match = authors.find(author => author.id === id)
+
+    if(match){
+        if(req.body.name){
+            match.name = req.body.name
+        }
+
+        if(req.body.age){
+            match.age = req.body.age
+        }
+
+        if(req.body.photo){
+            match.photo = req.body.photo
+        }
+
+        res.send({match})
+    } else {
+        res.status(404).send({error: "Author not found! 😒"})
+    }
 })
 
 //Authors extra stuff
