@@ -21,7 +21,11 @@ app.get('/', (req, res) => {
 })
 
 app.get('/quotes', (req, res) => {
-    res.send(quotes)
+    let quotesToSend = quotes.map(quote => {
+        let author = authors.find(author => author.id === quote.authorId)
+        return{...quote, author}
+    })
+    res.send(quotesToSend)
 })
 
 app.get('/quotes/:id', (req, res) => {
@@ -42,7 +46,11 @@ app.get('/randomquotes', (req, res) => {
 })
 
 app.get('/authors', (req, res) => {
-    res.send(authors)
+    let authorToSend = authors.map(author => {
+        const quotesWithAuthors = quotes.filter(quote => quote.authorId === author.id)
+        return {...author, quotes: quotesWithAuthors}
+    })
+    res.send(authorToSend)
 })
 
 app.get('/authors/:id', (req, res) => {
