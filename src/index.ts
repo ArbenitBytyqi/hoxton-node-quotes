@@ -1,6 +1,5 @@
 import express, { response } from 'express'
 import cors from 'cors'
-import { authors, quotes } from './data'
 import Database from "better-sqlite3";
 
 const db = Database ("./db/data.db", {verbose: console.log})
@@ -24,189 +23,165 @@ app.get('/', (req, res) => {
 
 //Quotes
 
+const getAllQuotes = db.prepare(`
+SELECT * FROM quotes;
+`)
+
+const getOneQuote = db.prepare(`
+SELECT * FROM quotes WHERE id = ?;
+`)
+
+const createQuote = db.prepare(`
+    INSERT INTO quotes (description, authorId) VALUES (?, ?);
+`)
+
+const deleteQuote = db.prepare(`
+DELETE FROM quotes WHERE id = ?;
+`)
+
+const updateQuote = db.prepare(`
+UPDATE quotes SET description = @description, authorId = @authorId WHERE id = @id;
+`)
+
 app.get('/quotes', (req, res) => {
-    let quotesToSend = quotes.map(quote => {
-        let author = authors.find(author => author.id === quote.authorId)
-        return{...quote, author}
-    })
-    res.send(quotesToSend)
+    const quotes = getAllQuotes.all()
+    res.send(quotes)
+})
+
+app.get('/quotes/:id', (req, res) => {
+    const id = Number(req.params.id)
+    const oneQuote = getOneQuote.get(id)
+
+    if(oneQuote){
+        res.send(oneQuote)
+    }else{
+        res.status(404).send({error: 'Quote not found'})
+    }
 })
 
 app.post('/quotes', (req, res) => {
+    const description = req.body.description
+    const authorId = req.body.authorId
+
     let errors: string[] = []
 
-    if (typeof req.body.description !== 'string'){
+    if (typeof description !== 'string'){
         errors.push('Quote not given')
     }
 
-    if (typeof req.body.authorId !== 'number'){
-        errors.push('Author not given')
+    if (typeof authorId !== 'number'){
+        errors.push('Authors Id not given')
     }
 
-    let author = authors.find(author => author.id === req.body.authorId)
-    if (!author){
-        errors.push('Author does not exist')
-    }
-
-    if (errors.length === 0){
-        const newQuote = {
-            id: quotes.length === 0 ? 1 : quotes[quotes.length - 1].id + 1, 
-            description: req.body.description,
-            authorId: req.body.authorId
-        }
-        quotes.push(newQuote)
-        res.send(newQuote)
-    } else{
-        res.status(400).send({errors})
+    if (errors.length > 0){
+        res.status(400).send({ errors })
+    }else{
+        const info = createQuote.run(description, authorId)
+        const quote = getOneQuote.get(info.lastInsertRowid)
+        res.send(quote)
     }
 })
 
 app.delete('/quotes/:id', (req, res) => {
     const id = Number(req.params.id)
-    const indexToDelete = quotes.findIndex(quote => quote.id === id)
+    const info = deleteQuote.run(id)
 
-    if (indexToDelete > -1) {
-        quotes.splice(indexToDelete, 1)
-        res.send({message: 'Quote deleted successfully.😊'})
-    }else{
-        res.status(404).send({error: 'Quote not found. 😒'})
+    if(info.changes){
+        res.send({message: 'Quote successfully deleted.' })
+    } else {
+        res.status(404).send({error: 'Quote not found 😒.' })
     }
-
-})
+  })
 
 app.patch('/quotes/:id', (req, res) => {
-    let id = Number(req.params.id)
-    let match = quotes.find(quote => quote.id === id)
-
-    if(match){
-        if(req.body.description){
-            match.description = req.body.description
-        }
-
-        if(req.body.authorId){
-            match.authorId = req.body.authorId
-        }
-
-        res.send({match})
-    } else {
-        res.status(404).send({error: "Quote not found! 😒"})
-    }
+    const info = updateQuote.run({...req.params, ...req.body})
+    res.send(info)
 })
 
-//Quotes extra stuff
 
-app.get('/quotes/:id', (req, res) => {
-    const id = Number(req.params.id)
-    const match = quotes.find(item => item.id === id)
+// //Authors
 
-    if(match){
-        res.send(match)
-    }else{
-        res.status(404).send({error: 'Sorry this item does not exist 😢'})
-    }
-})
+const getAllAuthors = db.prepare(`
+SELECT * FROM authors;
+`)
 
-app.get('/randomquotes', (req, res) => {
-    const randomIndex = Math.floor(Math.random() * quotes.length)
-    const randomItem = quotes[randomIndex]
-    res.send(randomItem)
-})
+const getOneAuthor = db.prepare(`
+SELECT * FROM authors WHERE id = ?;
+`)
 
-//Authors
+const createAuthor = db.prepare(`
+    INSERT INTO authors (name, age, photo) VALUES (?, ?, ?);
+`)
+
+const deleteAuthor = db.prepare(`
+DELETE FROM authors WHERE id = ?;
+`)
+
+const updateAuthor = db.prepare(`
+UPDATE authors SET name = @name, age = @age, photo = @photo WHERE id = @id;
+`)
 
 app.get('/authors', (req, res) => {
-    let authorToSend = authors.map(author => {
-        const quotesWithAuthors = quotes.filter(quote => quote.authorId === author.id)
-        return {...author, quotes: quotesWithAuthors}
-    })
-    res.send(authorToSend)
+    const authors = getAllAuthors.all()
+    res.send(authors)
 })
-
-app.post('/authors', (req, res) => {
-    let errors: string[] = []
-
-    if (typeof req.body.name !== 'string'){
-        errors.push('Authors name not given')
-    }
-
-    if (typeof req.body.age !== 'number'){
-        errors.push('Authors age not given')
-    }
-
-    if (typeof req.body.photo !== 'string'){
-        errors.push('Photo of the author is not given')
-    }
-
-    if (errors.length === 0){
-        const newAuthor = {
-            id: authors.length === 0 ? 1 : authors[authors.length - 1].id + 1, 
-            name: req.body.name,
-            age: req.body.age,
-            photo: req.body.photo
-        }
-        authors.push(newAuthor)
-        res.send(newAuthor)
-    } else{
-        res.status(400).send({errors})
-    }
-})
-
-app.delete('/authors/:id', (req, res) =>{
-    const id = Number(req.params.id)
-    const indexToDelete = authors.findIndex(author => author.id === id)
-
-    if (indexToDelete > -1) {
-        authors.splice(indexToDelete, 1)
-        res.send({message: 'Author deleted successfully.😊'})
-    }else{
-        res.status(404).send({error: 'Author not found. 😒'})
-    }
-
-})
-
-app.patch('/authors/:id', (req, res) => {
-    let id = Number(req.params.id)
-    let match = authors.find(author => author.id === id)
-
-    if(match){
-        if(req.body.name){
-            match.name = req.body.name
-        }
-
-        if(req.body.age){
-            match.age = req.body.age
-        }
-
-        if(req.body.photo){
-            match.photo = req.body.photo
-        }
-
-        res.send({match})
-    } else {
-        res.status(404).send({error: "Author not found! 😒"})
-    }
-})
-
-//Authors extra stuff
 
 app.get('/authors/:id', (req, res) => {
     const id = Number(req.params.id)
-    const match = authors.find(item => item.id === id)
+    const oneAuthor = getOneAuthor.get(id)
 
-    if(match){
-        res.send(match)
+    if(oneAuthor){
+        res.send(oneAuthor)
     }else{
-        res.status(404).send({error: 'Sorry this item does not exist 😢'})
+        res.status(404).send({error: 'Author not found'})
     }
 })
 
-app.get('/randomauthors', (req, res) => {
-    const randomIndex = Math.floor(Math.random() * authors.length)
-    const randomItem = authors[randomIndex]
-    res.send(randomItem)
+app.post('/authors', (req, res) => {
+    const name = req.body.name
+    const age = req.body.age
+    const photo = req.body.photo
+
+    let errors: string[] = []
+
+    if (typeof name !== 'string'){
+        errors.push('Name of author not given')
+    }
+
+    if (typeof age !== 'number'){
+        errors.push('Authors age not given')
+    }
+
+    if (typeof photo !== 'string'){
+        errors.push('Authors photo not given')
+    }
+
+    if (errors.length > 0){
+        res.status(400).send({ errors })
+    }else{
+        const info = createAuthor.run(name, age, photo)
+        const author = getOneAuthor.get(info.lastInsertRowid)
+        res.send(author)
+    }
 })
 
-//General
+app.delete('/authors/:id', (req, res) => {
+    const id = Number(req.params.id)
+    const info = deleteAuthor.run(id)
+
+    if(info.changes){
+        res.send({message: 'Author successfully deleted.' })
+    } else {
+        res.status(404).send({error: 'Author not found 😒.' })
+    }
+  })
+
+  app.patch('/authors/:id', (req, res) => {
+    const info = updateAuthor.run({...req.params, ...req.body})
+    res.send(info)
+})
+
+// //General
 
 app.listen(port, () => {
      console.log (`App running on port: ${port} `)
