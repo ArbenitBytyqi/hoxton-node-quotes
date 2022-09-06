@@ -1,9 +1,9 @@
 import express, { response } from 'express'
 import cors from 'cors'
 import { authors, quotes } from './data'
+import Database from "better-sqlite3";
 
-
-
+const db = Database ("./db/data.db", {verbose: console.log})
 const app = express()
 app.use(cors())
 app.use(express.json())
